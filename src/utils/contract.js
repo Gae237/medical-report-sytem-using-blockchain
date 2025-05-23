@@ -1,30 +1,21 @@
+// src/utils/contract.js
 import { ethers } from "ethers";
-import MedicalReportABI from "../abis/MedicalReport.json";
+import contractAbi from "../abis/MedicalReportSystem.json";
 
-// Replace this with your actual deployed address
-const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
-export const connectContract = async () => {
-  if (!window.ethereum) {
-    alert("MetaMask is required!");
-    return;
-  }
+export async function connectContract() {
+  if (!window.ethereum) throw new Error("MetaMask not found");
 
-  await window.ethereum.request({ method: "eth_requestAccounts" });
-
-  const provider = new ethers.BrowserProvider(window.ethereum);
-  const signer = await provider.getSigner();
-  const contract = new ethers.Contract(contractAddress, MedicalReportABI.abi, signer);
+  const provider = new ethers.providers.Web3Provider(window.ethereum);
+  const signer = provider.getSigner();
+  const contract = new ethers.Contract(CONTRACT_ADDRESS, contractAbi.abi, signer);
 
   return contract;
-};
+}
 
-export const getWalletAddress = async () => {
-  if (!window.ethereum) {
-    alert("MetaMask is required!");
-    return null;
-  }
-
+export async function getWalletAddress() {
+  if (!window.ethereum) throw new Error("MetaMask not found");
   const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
   return accounts[0];
-};
+}
