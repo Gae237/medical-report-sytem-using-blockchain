@@ -1,62 +1,28 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import LoginPatient from './pages/LoginPatient';
+import RegisterPatient from './pages/RegisterPatient';
+import LoginDoctor from './pages/LoginDoctor';
+import RegisterDoctor from './pages/RegisterDoctor';
+import DashboardPatient from './pages/DashboardPatient';
+import DashboardDoctor from './pages/DashboardDoctor';
 import Navbar from './components/Navbar';
-import Login from './pages/Login';
-import UploadReport from './pages/UploadReport';
-import DoctorDashboard from './pages/DoctorDashboard';
-import AccessControl from './pages/AccessControl';
-import Dashboard from './pages/Dashboard';
-import { AuthProvider } from './context/AuthContext';
-import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <Navbar />
-        <div className="container">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-
-            <Route
-              path="/upload"
-              element={
-                <ProtectedRoute allowedRoles={['patient']}>
-                  <UploadReport />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/doctor"
-              element={
-                <ProtectedRoute allowedRoles={['doctor']}>
-                  <DoctorDashboard />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/access-control"
-              element={
-                <ProtectedRoute allowedRoles={['doctor']}>
-                  <AccessControl />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute allowedRoles={['patient', 'doctor']}>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+    <>
+      <Navbar />
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login/patient" element={<LoginPatient />} />
+        <Route path="/register/patient" element={<RegisterPatient />} />
+        <Route path="/login/doctor" element={<LoginDoctor />} />
+        <Route path="/register/doctor" element={<RegisterDoctor />} />
+        <Route path="/dashboard/patient" element={<DashboardPatient />} />
+        <Route path="/dashboard/doctor" element={<DashboardDoctor />} />
+      </Routes>
+    </>
   );
 }
 

@@ -1,74 +1,123 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.0;
 
-contract MedicalReport {
+contract MedicalReportSystem {
     enum Role { None, Patient, Doctor }
 
     struct User {
         Role role;
-        string metadata; // Optional future use (e.g. IPFS profile)
+        address[] accessList;
     }
 
     struct Report {
-        string ipfsHash;
+        string cid;
         address owner;
-        uint timestamp;
+    }
+
+    struct ReportInfo {
+        string cid;
+        address owner;
     }
 
     mapping(address => User) public users;
-    mapping(address => Report[]) public patientReports;
-    mapping(address => mapping(address => bool)) public reportAccess; // doctor => patient => access
+    mapping(address => Report[]) private reports;
+    address[] private allPatients;
 
-    event Registered(address indexed user, Role role);
-    event ReportUploaded(address indexed patient, string ipfsHash);
-    event AccessGranted(address indexed patient, address indexed doctor);
-    event AccessRevoked(address indexed patient, address indexed doctor);
-
-    modifier onlyRole(Role expected) {
-        require(users[msg.sender].role == expected, "Unauthorized role");
+    modifier onlyPatient() {
+        require(users[msg.sender].role == Role.Patient, "Only patients allowed");
         _;
     }
 
-    modifier onlyRegistered() {
-        require(users[msg.sender].role != Role.None, "Not registered");
+    modifier onlyDoctor() {
+        require(users[msg.sender].role == Role.Doctor, "Only doctors allowed");
         _;
     }
 
     function register(Role _role) external {
-        require(_role == Role.Patient || _role == Role.Doctor, "Invalid role");
         require(users[msg.sender].role == Role.None, "Already registered");
+        require(_role == Role.Patient || _role == Role.Doctor, "Invalid role");
 
-        users[msg.sender] = User(_role, "");
-        emit Registered(msg.sender, _role);
+        users[msg.sender].role = _role;
+
+        if (_role == Role.Patient) {
+            allPatients.push(msg.sender);
+        }
     }
 
-    function uploadReport(string memory _ipfsHash) external onlyRole(Role.Patient) {
-        patientReports[msg.sender].push(Report(_ipfsHash, msg.sender, block.timestamp));
-        emit ReportUploaded(msg.sender, _ipfsHash);
+    function uploadReport(string memory cid) external onlyPatient {
+        reports[msg.sender].push(Report(cid, msg.sender));
     }
 
-    function grantAccess(address _doctor) external onlyRole(Role.Patient) {
-        require(users[_doctor].role == Role.Doctor, "Target is not a doctor");
-        reportAccess[_doctor][msg.sender] = true;
-        emit AccessGranted(msg.sender, _doctor);
+    function grantAccess(address doctor) external onlyPatient {
+        require(users[doctor].role == Role.Doctor, "Target must be a doctor");
+        address[] storage list = users[msg.sender].accessList;
+
+        // prevent duplicate
+        for (uint i = 0; i < list.length; i++) {
+            if (list[i] == doctor) return;
+        }
+
+        list.push(doctor);
     }
 
-    function revokeAccess(address _doctor) external onlyRole(Role.Patient) {
-        require(reportAccess[_doctor][msg.sender], "Access not granted");
-        reportAccess[_doctor][msg.sender] = false;
-        emit AccessRevoked(msg.sender, _doctor);
+    function revokeAccess(address doctor) external onlyPatient {
+        address[] storage list = users[msg.sender].accessList;
+        for (uint i = 0; i < list.length; i++) {
+            if (list[i] == doctor) {
+                list[i] = list[list.length - 1];
+                list.pop();
+                break;
+            }
+        }
     }
 
-    function getMyReports() external view onlyRole(Role.Patient) returns (Report[] memory) {
-        return patientReports[msg.sender];
+    function getAccessList() external view onlyPatient returns (address[] memory) {
+        return users[msg.sender].accessList;
     }
 
-    function getPatientReports(address _patient) external view onlyRole(Role.Doctor) returns (Report[] memory) {
-        require(reportAccess[msg.sender][_patient], "Access denied by patient");
-        return patientReports[_patient];
+    function getMyReports() external view returns (Report[] memory) {
+        return reports[msg.sender];
     }
 
-    function getUser(address _user) external view returns (User memory) {
-        return users[_user];
+    function getPatientReports(address patient) external view onlyDoctor returns (Report[] memory) {
+        require(hasAccess(patient, msg.sender), "Access not granted");
+        return reports[patient];
+    }
+
+    function getReportsSharedWithDoctor() external view onlyDoctor returns (ReportInfo[] memory) {
+        uint total = 0;
+
+        // Count how many shared reports exist
+        for (uint i = 0; i < allPatients.length; i++) {
+            if (hasAccess(allPatients[i], msg.sender)) {
+                total += reports[allPatients[i]].length;
+            }
+        }
+
+        ReportInfo[] memory result = new ReportInfo[](total);
+        uint index = 0;
+
+        for (uint i = 0; i < allPatients.length; i++) {
+            address patient = allPatients[i];
+            if (hasAccess(patient, msg.sender)) {
+                Report[] memory patientReports = reports[patient];
+                for (uint j = 0; j < patientReports.length; j++) {
+                    result[index++] = ReportInfo({
+                        cid: patientReports[j].cid,
+                        owner: patient
+                    });
+                }
+            }
+        }
+
+        return result;
+    }
+
+    function hasAccess(address patient, address doctor) internal view returns (bool) {
+        address[] memory list = users[patient].accessList;
+        for (uint i = 0; i < list.length; i++) {
+            if (list[i] == doctor) return true;
+        }
+        return false;
     }
 }
