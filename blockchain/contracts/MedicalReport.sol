@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract MedicalReportSystem {
+contract MedicalReport {
     enum Role { None, Patient, Doctor }
 
     struct User {
@@ -43,6 +43,11 @@ contract MedicalReportSystem {
             allPatients.push(msg.sender);
         }
     }
+
+    function getUser(address user) public view returns (Role) {
+    return users[user].role;
+}
+
 
     function uploadReport(string memory cid) external onlyPatient {
         reports[msg.sender].push(Report(cid, msg.sender));

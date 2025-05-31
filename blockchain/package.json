@@ -2,7 +2,6 @@
   "name": "blockchain",
   "version": "1.0.0",
   "type": "module",
-
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -12,7 +11,12 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^3.0.8",
+    "@nomicfoundation/hardhat-ignition": "^0.15.11",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
-    "hardhat": "^2.24.0"
+    "hardhat": "^2.24.1"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0"
   }
 }

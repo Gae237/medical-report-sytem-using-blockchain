@@ -1,11 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FaEnvelope, FaLock, FaUser } from 'react-icons/fa';
+import { FaEnvelope, FaLock, FaUser, FaWallet } from 'react-icons/fa';
 import { toast, ToastContainer } from 'react-toastify';
+import { getWalletAddress, connectContract } from '../utils/contract';
 import 'react-toastify/dist/ReactToastify.css';
 import '../styles/Auth.css';
 
 export default function RegisterDoctor() {
+  const [wallet, setWallet] = useState('');
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: '',
@@ -14,15 +16,34 @@ export default function RegisterDoctor() {
     confirm: ''
   });
 
+  // Check wallet connection on load
+  useEffect(() => {
+    async function fetchWallet() {
+      try {
+        const address = await getWalletAddress();
+        setWallet(address);
+      } catch (err) {
+        toast.error("🦊 Please connect your MetaMask wallet");
+      }
+    }
+    fetchWallet();
+  }, []);
+
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     const { name, email, password, confirm } = form;
+
+    if (!wallet) {
+      toast.error('MetaMask wallet not connected');
+      setLoading(false);
+      return;
+    }
 
     if (!name || !email || !password || !confirm) {
       toast.error('All fields are required');
@@ -36,10 +57,20 @@ export default function RegisterDoctor() {
       return;
     }
 
-    setTimeout(() => {
+    try {
+      const contract = await connectContract();
+
+      // 🔐 Register as doctor (2 = Role.Doctor)
+      const tx = await contract.register(2);
+      await tx.wait();
+
+      toast.success(`✅ Doctor registered! Wallet: ${wallet.slice(0, 6)}...`);
+    } catch (err) {
+      console.error(err);
+      toast.error('❌ Registration failed: maybe already registered?');
+    } finally {
       setLoading(false);
-      toast.success('Doctor registration successful');
-    }, 1500);
+    }
   };
 
   return (
@@ -47,6 +78,13 @@ export default function RegisterDoctor() {
       <ToastContainer />
       <div className="auth-card">
         <h2 className="auth-title">Register as a Doctor</h2>
+
+        {wallet && (
+          <p className="wallet-connected">
+            <FaWallet style={{ marginRight: '8px' }} />
+            Wallet Connected: <strong>{wallet.slice(0, 6)}...{wallet.slice(-4)}</strong>
+          </p>
+        )}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="auth-input-group">

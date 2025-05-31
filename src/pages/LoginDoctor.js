@@ -1,32 +1,37 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { FaEnvelope, FaLock } from 'react-icons/fa';
+import { useNavigate, Link } from 'react-router-dom';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../styles/Auth.css';
+import { connectContract, getWalletAddress } from '../utils/contract';
 
 export default function LoginDoctor() {
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ email: '', password: '' });
+  const navigate = useNavigate();
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleLogin = async () => {
     setLoading(true);
+    toast.info("🦊 Connecting to MetaMask...");
 
-    if (!form.email || !form.password) {
-      toast.error('All fields are required');
+    try {
+      const wallet = await getWalletAddress(); // Get connected wallet address
+      const contract = await connectContract(); // Connect to deployed contract
+      const user = await contract.getUser(wallet); // Check user's role
+
+      if (user.role === 2n) {
+        toast.success("✅ Login successful as Doctor. Redirecting...");
+        setTimeout(() => navigate("/dashboard/doctor"), 2000);
+      } else if (user.role === 1n) {
+        toast.warn("⚠️ This wallet is registered as a Patient.");
+      } else {
+        toast.error("❌ Wallet not registered. Please register as a Doctor.");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("❌ Login failed. Please ensure MetaMask is connected.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setTimeout(() => {
-      setLoading(false);
-      toast.success('Doctor login successful');
-    }, 1500);
   };
 
   return (
@@ -35,35 +40,9 @@ export default function LoginDoctor() {
       <div className="auth-card">
         <h2 className="auth-title">Doctor Login</h2>
 
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <div className="auth-input-group">
-            <FaEnvelope className="auth-icon" />
-            <input
-              type="email"
-              name="email"
-              placeholder="Email Address"
-              className="auth-input with-icon"
-              value={form.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="auth-input-group">
-            <FaLock className="auth-icon" />
-            <input
-              type="password"
-              name="password"
-              placeholder="Password"
-              className="auth-input with-icon"
-              value={form.password}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <button type="submit" className="auth-button" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
+        <button onClick={handleLogin} className="auth-button" disabled={loading}>
+          {loading ? 'Connecting...' : 'Login with MetaMask'}
+        </button>
 
         <p className="auth-footer">
           Don’t have an account?{' '}
