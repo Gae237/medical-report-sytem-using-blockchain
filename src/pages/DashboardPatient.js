@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { getWalletAddress, connectContract } from "../utils/contract";
 import "../styles/Dashboard.css";
-import axios from "axios"; // for IPFS via Pinata
+import axios from "axios";
 
 export default function DashboardPatient() {
   const [wallet, setWallet] = useState("");
@@ -19,39 +19,65 @@ export default function DashboardPatient() {
     fetchAccessList();
   }, []);
 
-  const handleGrant = async () => {
+  const handleRegister = async () => {
     try {
       const contract = await connectContract();
-      const tx = await contract.grantAccess(doctorAddress);
+      const tx = await contract.register(0); // 0 = Patient
       await tx.wait();
-      setMessage(`✅ Access granted to ${doctorAddress}`);
-      fetchAccessList();
+      setMessage("✅ Successfully registered as Patient.");
+      fetchAccessList(); // refresh access list
     } catch (err) {
-      console.error(err);
-      setMessage("❌ Error granting access.");
-    }
-  };
-
-  const handleRevoke = async () => {
-    try {
-      const contract = await connectContract();
-      const tx = await contract.revokeAccess(doctorAddress);
-      await tx.wait();
-      setMessage(`✅ Access revoked from ${doctorAddress}`);
-      fetchAccessList();
-    } catch (err) {
-      console.error(err);
-      setMessage("❌ Error revoking access.");
+      console.error("Registration failed", err);
+      setMessage("❌ " + err.message);
     }
   };
 
   const fetchAccessList = async () => {
     try {
       const contract = await connectContract();
+      const address = await getWalletAddress();
+      const role = await contract.getUser(address);
+      if (role !== 0) throw new Error("You are not registered as a Patient");
+
       const list = await contract.getAccessList();
       setAccessList(list);
     } catch (err) {
       console.error("Failed to fetch access list", err);
+      setMessage("❌ " + err.message);
+    }
+  };
+
+  const handleGrant = async () => {
+    try {
+      const contract = await connectContract();
+      const address = await getWalletAddress();
+      const role = await contract.getUser(address);
+      if (role !== 0) throw new Error("You are not registered as a Patient");
+
+      const tx = await contract.grantAccess(doctorAddress);
+      await tx.wait();
+      setMessage(`✅ Access granted to ${doctorAddress}`);
+      fetchAccessList();
+    } catch (err) {
+      console.error(err);
+      setMessage("❌ " + err.message);
+    }
+  };
+
+  const handleRevoke = async () => {
+    try {
+      const contract = await connectContract();
+      const address = await getWalletAddress();
+      const role = await contract.getUser(address);
+      if (role !== 0) throw new Error("You are not registered as a Patient");
+
+      const tx = await contract.revokeAccess(doctorAddress);
+      await tx.wait();
+      setMessage(`✅ Access revoked from ${doctorAddress}`);
+      fetchAccessList();
+    } catch (err) {
+      console.error(err);
+      setMessage("❌ " + err.message);
     }
   };
 
@@ -62,6 +88,11 @@ export default function DashboardPatient() {
     }
 
     try {
+      const contract = await connectContract();
+      const address = await getWalletAddress();
+      const role = await contract.getUser(address);
+      if (role !== 0) throw new Error("You are not registered as a Patient");
+
       setMessage("⏳ Uploading to IPFS...");
       const formData = new FormData();
       formData.append("file", file);
@@ -78,13 +109,12 @@ export default function DashboardPatient() {
       const cid = res.data.IpfsHash;
       setMessage(`✅ File uploaded. CID: ${cid}`);
 
-      const contract = await connectContract();
       const tx = await contract.uploadReport(cid);
       await tx.wait();
       setMessage(`✅ Report uploaded and stored on chain.`);
     } catch (err) {
       console.error(err);
-      setMessage("❌ Upload failed.");
+      setMessage("❌ " + err.message);
     }
   };
 
@@ -95,6 +125,14 @@ export default function DashboardPatient() {
         <p className="wallet-display">
           <strong>Connected Wallet:</strong> {wallet || "Not connected"}
         </p>
+
+        {/* Register Patient Button */}
+        <div className="access-section">
+          <h3>Not Registered Yet?</h3>
+          <button className="btn register-btn" onClick={handleRegister}>
+            Register as Patient
+          </button>
+        </div>
 
         {/* Access Control */}
         <div className="access-section">

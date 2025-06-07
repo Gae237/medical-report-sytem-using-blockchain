@@ -1,5 +1,7 @@
 const Report = require('../models/Report');
 const { uploadToIPFS } = require('../utils/ipfs');
+const { contract } = require('../utils/contract');
+
 const fs = require('fs');
 
 exports.uploadFileReport = async (req, res) => {
@@ -34,6 +36,27 @@ exports.getReportsByPatient = async (req, res) => {
   } catch (error) {
     console.error('Error in getReportsByPatient:', error);
     res.status(500).json({ message: 'Server error' });
+  }
+};
+
+exports.getReportsForDoctor = async (req, res) => {
+  const { doctorAddress, patientAddress } = req.body;
+
+  try {
+    // 🔐 Check access from blockchain contract
+    const hasAccess = await contract.checkAccess(patientAddress, doctorAddress);
+
+    if (!hasAccess) {
+      return res.status(403).json({ message: 'Access denied: Doctor does not have permission' });
+    }
+
+    // 📦 Fetch reports from MongoDB
+    const reports = await Report.find({ owner: patientAddress });
+
+    res.status(200).json({ reports });
+  } catch (error) {
+    console.error('Error in getReportsForDoctor:', error);
+    res.status(500).json({ message: 'Error checking access or fetching reports', error: error.message });
   }
 };
 

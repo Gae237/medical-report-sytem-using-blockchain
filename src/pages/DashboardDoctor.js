@@ -14,16 +14,35 @@ export default function DashboardDoctor() {
         setWallet(address);
 
         const contract = await connectContract();
+        const role = await contract.getUser(address);
+        if (role !== 1) throw new Error("You are not registered as a Doctor");
+
         const sharedReports = await contract.getReportsSharedWithDoctor();
         setReports(sharedReports);
       } catch (err) {
         console.error(err);
-        setMessage("❌ Error loading shared reports.");
+        setMessage("❌ " + err.message);
       }
     };
 
     fetchWalletAndReports();
   }, []);
+
+  const handleRegister = async () => {
+    try {
+      const contract = await connectContract();
+      const tx = await contract.register(1); // 1 = Doctor
+      await tx.wait();
+      setMessage("✅ Successfully registered as Doctor.");
+
+      // Refresh reports if any were shared already
+      const newReports = await contract.getReportsSharedWithDoctor();
+      setReports(newReports);
+    } catch (err) {
+      console.error("Registration failed", err);
+      setMessage("❌ " + err.message);
+    }
+  };
 
   return (
     <div className="dashboard-wrapper fade-in-up">
@@ -33,6 +52,15 @@ export default function DashboardDoctor() {
           <strong>Connected Wallet:</strong> {wallet || "Not connected"}
         </p>
 
+        {/* Register Doctor Button */}
+        <div className="access-section">
+          <h3>Not Registered Yet?</h3>
+          <button className="btn register-btn" onClick={handleRegister}>
+            Register as Doctor
+          </button>
+        </div>
+
+        {/* Report Access */}
         <div className="access-section">
           <h3>Reports Shared With You</h3>
           {reports.length > 0 ? (

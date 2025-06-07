@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import contractAbi from "../abis/MedicalReport.json";
 
 // ⚠️ Replace with latest address from `npx hardhat ignition deploy`
-const CONTRACT_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const CONTRACT_ADDRESS = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512";
 
 // Get wallet address (ensures MetaMask permission is requested once)
 export const getWalletAddress = async () => {

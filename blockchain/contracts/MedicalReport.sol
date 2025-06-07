@@ -125,4 +125,9 @@ contract MedicalReport {
         }
         return false;
     }
+
+    function checkAccess(address patient, address doctor) external view returns (bool) {
+    return hasAccess(patient, doctor);
+}
+
 }
