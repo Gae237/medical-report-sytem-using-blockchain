@@ -10,21 +10,21 @@ export default function LoginPatient() {
 
   const handleLogin = async () => {
     setLoading(true);
-    setStatus("⏳ Connecting to MetaMask...");
+    setStatus("🦊 Connecting to MetaMask...");
 
     try {
       const wallet = await getWalletAddress();
       const contract = await connectContract();
 
       setStatus("🔍 Verifying your role...");
-      const role = await contract.getUser(wallet);
+      const user = await contract.getUser(wallet);
 
-      if (role === 1n) {
+      if (user.role === 1n) {
         setStatus("✅ Logged in successfully as Patient. Redirecting...");
         setTimeout(() => {
           navigate("/dashboard/patient");
         }, 2000);
-      } else if (role === 2n) {
+      } else if (user.role === 2n) {
         setStatus("⚠️ This wallet is registered as a Doctor. Please use the Doctor login.");
       } else {
         setStatus("❌ This wallet is not registered. Please register as a Patient.");

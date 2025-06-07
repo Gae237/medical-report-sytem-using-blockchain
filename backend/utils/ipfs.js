@@ -1,29 +1,42 @@
-const axios = require("axios");
-const FormData = require("form-data");
+const axios = require('axios');
+const FormData = require('form-data');
+const fs = require('fs');
+require('dotenv').config();
 
 const PINATA_API_KEY = process.env.PINATA_API_KEY;
 const PINATA_API_SECRET = process.env.PINATA_API_SECRET;
 
-async function uploadToIPFS(fileBuffer, filename) {
-  const data = new FormData();
-  data.append("file", fileBuffer, filename);
+exports.uploadToIPFS = async (filePath) => {
+  const formData = new FormData();
+  formData.append('file', fs.createReadStream(filePath));
 
   const metadata = JSON.stringify({
-    name: filename,
+    name: 'medical-report-file'
   });
+  formData.append('pinataMetadata', metadata);
 
-  data.append("pinataMetadata", metadata);
-
-  const res = await axios.post("https://api.pinata.cloud/pinning/pinFileToIPFS", data, {
-    maxBodyLength: Infinity,
-    headers: {
-      ...data.getHeaders(),
-      pinata_api_key: PINATA_API_KEY,
-      pinata_secret_api_key: PINATA_API_SECRET,
-    },
+  const options = JSON.stringify({
+    cidVersion: 1
   });
+  formData.append('pinataOptions', options);
 
-  return res.data.IpfsHash; // ← this is your CID
-}
+  try {
+    const res = await axios.post(
+      'https://api.pinata.cloud/pinning/pinFileToIPFS',
+      formData,
+      {
+        maxBodyLength: 'Infinity',
+        headers: {
+          'Content-Type': `multipart/form-data; boundary=${formData._boundary}`,
+          pinata_api_key: PINATA_API_KEY,
+          pinata_secret_api_key: PINATA_API_SECRET,
+        },
+      }
+    );
 
-module.exports = { uploadToIPFS };
+    return res.data.IpfsHash;
+  } catch (error) {
+    console.error('Error uploading to Pinata:', error);
+    throw new Error('Pinata upload failed');
+  }
+};
